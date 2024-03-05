@@ -24,7 +24,8 @@ interface Cycle {
     task: string,
     minutesAmount: number,
     startDate: Date,
-    interruptedDate?: Date
+    interruptedDate?: Date,
+    finishedDate?: Date
 }
 
 export function Home() {
@@ -42,21 +43,38 @@ export function Home() {
 
     const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
 
+    const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
+
     useEffect(() => {
         let interval: number;
 
         if (activeCycle) {
             interval = setInterval(() => {
-                setAmountSecondsPassed(
-                    differenceInSeconds(new Date(), activeCycle.startDate)
-                )
+                const secondsDiff = differenceInSeconds(new Date(), activeCycle.startDate)
+
+                if (secondsDiff >= totalSeconds) {
+                    setCycles((state) =>
+                        state.map((cycle) => {
+                            if (cycle.id === activeCycleId) {
+                                return {...cycle, finishedDate: new Date()}
+                            } else {
+                                return cycle
+                            }
+                        })
+                    )
+
+                    setAmountSecondsPassed(totalSeconds)
+                    clearInterval(interval)
+                } else {
+                    setAmountSecondsPassed(secondsDiff)
+                }
             }, 1000)
         }
 
         return () => {
             clearInterval(interval)
         }
-    }, [activeCycle])
+    }, [activeCycle, totalSeconds, activeCycleId])
 
     function handleCreateNewCycle(data: NewCycleFormData) {
         const newCycle: Cycle = {
@@ -76,10 +94,8 @@ export function Home() {
     }
 
     function handleInterruptCycle() {
-        setActiveCycleId(null)
-
-        setCycles(
-            cycles.map((cycle) => {
+        setCycles((state) =>
+            state.map((cycle) => {
                 if (cycle.id === activeCycleId) {
                     return {...cycle, interruptedDate: new Date()}
                 } else {
@@ -87,12 +103,13 @@ export function Home() {
                 }
             })
         )
+
+        setActiveCycleId(null)
     }
 
     const task = watch('task')
     const isSubmitDisabled = !task
 
-    const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
     const amountSecondsRemaining = activeCycle ? totalSeconds - amountSecondsPassed : 0
 
     const minutesAmount = Math.floor(amountSecondsRemaining / 60)
