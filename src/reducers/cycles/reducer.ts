@@ -1,4 +1,4 @@
-import { current, produce } from "immer"
+import { produce } from "immer"
 
 import { ActionTypes } from "./actions"
 
